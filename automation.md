@@ -16,10 +16,69 @@ For managing services, we define the following types of playbooks for managing a
 | **deploy** | Deploys all the resources to a host or container that runs the service |
 | **install** | Marshalls all the resources needed for a service onto a control node, a managed node, or a local repopsity |
 | **start** | Starts the service on the container or host without having to reinstall or redeploy any resources |
-| **diagnose** | Tests to see if the the service and its prerequisites are properly running and if not attemtps to understand what is wrong. Sometimes this is called a **status** playbook, but that term is deprecated.
+| **diagnose** | Observes and reports current health/state of the service and prerequisites with read-only checks. Sometimes this is called a **status** playbook, but that term is deprecated. |
+| **test** | Asserts expected behavior by exercising workflows end-to-end and returning pass/fail results. May create short-lived test artifacts and should clean them up. |
 | **stop** | Stops the service running |
 | **undeploy** | Removes all the resources needed for a service from a host or container |
 | **uninstall** | Removes all transient resources from the control node with the exception of any source code from a repository |
+
+## Per-Verb Semantics
+
+### build
+- Purpose: transform source or templates into deployable artifacts.
+- Typical behavior: compile, package, render, stage.
+- Side effects: artifact outputs only.
+
+### install
+- Purpose: prepare hosts and control nodes with prerequisites.
+- Typical behavior: install packages, users, directories, runtimes, base configs.
+- Difference vs deploy: install prepares substrate; deploy places service resources on that substrate.
+- Side effects: host-level state changes expected and persistent.
+
+### deploy
+- Purpose: place and configure service-specific resources so the service can be started.
+- Typical behavior: apply manifests, distribute configs, create service accounts, mount points.
+- Difference vs install: deploy targets service composition; install targets foundational prerequisites.
+- Side effects: service artifacts/manifests present, but service may still be stopped.
+
+### start
+- Purpose: transition deployed service to running.
+- Typical behavior: start daemons, scale workloads up, enable runtime routes.
+- Side effects: runtime activity starts.
+
+### diagnose
+- Purpose: answer "what is the current state and what is wrong?"
+- Behavior characteristics:
+- Read-only checks where possible.
+- Safe to run repeatedly in broken or healthy environments.
+- Reports facts (pods, ports, endpoints, cert dates, mounts, logs).
+- Does not claim contractual pass/fail for end-to-end user workflows.
+- Preferred outputs:
+- Structured table/list of checks with status and details.
+- Clear remediation hints for each failed check.
+
+### test
+- Purpose: answer "does the service behavior meet expectations?"
+- Behavior characteristics:
+- Executes workflow assertions (for example write->read, submit->complete, emit->observe).
+- Produces explicit pass/fail outcomes suitable for CI or release gates.
+- May create temporary test artifacts and should clean them up.
+- Should fail fast with actionable diagnostics.
+- Relationship to diagnose:
+- Diagnose verifies state and preconditions.
+- Test verifies behavior and contracts between components.
+
+### stop
+- Purpose: transition running service to non-running state without removing deployment artifacts.
+- Typical behavior: stop daemons, scale workloads down.
+
+### undeploy
+- Purpose: remove deployed service resources from targets.
+- Typical behavior: delete manifests/resources, remove service-level configs.
+
+### uninstall
+- Purpose: remove installed prerequisites/transient host resources.
+- Typical behavior: uninstall packages/services and clean transient state.
 
 
 # Statements
