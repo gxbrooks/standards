@@ -52,7 +52,9 @@ For managing services, we define the following types of playbooks for managing a
 - Read-only checks where possible.
 - Safe to run repeatedly in broken or healthy environments.
 - Reports facts (pods, ports, endpoints, cert dates, mounts, logs).
-- Does not claim contractual pass/fail for end-to-end user workflows.
+- Must include all checks in the corresponding test playbook for the same service.
+- Must be a superset of the corresponding test playbook by adding deeper diagnostics, richer evidence, and remediation hints.
+- May run additional in-depth probes that are heavier than test.
 - Preferred outputs:
 - Structured table/list of checks with status and details.
 - Clear remediation hints for each failed check.
@@ -65,8 +67,9 @@ For managing services, we define the following types of playbooks for managing a
 - May create temporary test artifacts and should clean them up.
 - Should fail fast with actionable diagnostics.
 - Relationship to diagnose:
-- Diagnose verifies state and preconditions.
-- Test verifies behavior and contracts between components.
+- Test is the baseline check set for service correctness.
+- Diagnose includes all test checks plus deeper diagnostic checks.
+- A test that wholly depends on another test must not run when the prerequisite test fails.
 
 ### stop
 - Purpose: transition running service to non-running state without removing deployment artifacts.
@@ -94,6 +97,12 @@ For managing services, we define the following types of playbooks for managing a
 1. The automation platform is Ansible. You must use Ansible for all automations, unless the automation is to manage or deploy prerequisite of  
 1. You should not execute a step in an automation, unless the step is necessary. The steps should check to see if the outcome of the step is already in place. For example, do not delete a directory if the directory does not already exist. You can use commands that internally  
 1. Each automations should be idempotent. I.e. rerunning the automation should result in the same configuration state. The primary automation platform is Ansible. 
+## Diagnostic and Test Playbooks
+1. For a service that has both test and diagnose playbooks, the diagnose playbook must include all checks in the test playbook for that service.
+1. A diagnose playbook should include deeper and broader checks than a test playbook for the same service.
+1. If a check wholly depends on the success of a prerequisite check, the dependent check must not run when the prerequisite check fails.
+1. Shared logic between test and diagnose playbooks should be factored into common reusable tasks or sub-playbooks to avoid duplication.
+1. A single-play or single-task check should not be extracted into a separate shared playbook unless reuse and maintenance value clearly outweigh added indirection.
 
 ## Transient Scripts
 1. A developer should create a top-level tmp directory for each project
@@ -106,4 +115,9 @@ For managing services, we define the following types of playbooks for managing a
 
 
 ## Playbooks
+
+### common directory
+1. A service module may contain a `common` subdirectory to hold reusable playbook fragments or task files shared by multiple playbooks such as test and diagnose.
+1. Content in a `common` subdirectory should contain only reusable logic and must not change the semantic purpose of the calling playbook.
+1. Automators should keep shared code in `common` only when that reduces meaningful duplication and improves consistency of checks across playbooks.
 
