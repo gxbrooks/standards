@@ -2,6 +2,26 @@
 
 ## Definitions
 
+A *dashboard* is a named saved view that assigns a time range and contains an ordered set of panels positioned on a layout grid.
+
+A *layout grid* divides the dashboard into columns and rows of uniform cells; each panel occupies a rectangle of contiguous cells.
+
+*Grid width* is the number of horizontal grid cells a panel spans.
+
+A *panel* is a bounded region on the dashboard that displays a visualization and typical chrome such as a title and legend.
+
+A *panel title* is the text label identifying a panel.
+
+A *row* (dashboard row) is a collapsible section header that groups panels; it is not a data visualization.
+
+A *time-series panel* is a panel whose primary visualization plots measures against time.
+
+A *y-axis region* is the portion of a panel reserved for vertical axis tick labels, immediately to the left of the plot region.
+
+A *plot region* is the portion of a panel where series data are drawn, bounded by the axes (typically to the right of the y-axis region and above the horizontal time axis).
+
+A *plot x-origin* is the horizontal position within the plot region where the time axis begins. When plot x-origins align across panels in the same dashboard column, the same instant in time maps to the same horizontal offset in each plot region.
+
 A *composite dashboard* displays multiple panels over a common timeframe in one view.
 
 A *metric* (or *metric name*) is the resource or entity being measured, such as CPU utilization, I/O rate, or temperature.
@@ -38,7 +58,7 @@ An *envelope graph* is a time-series panel where one complementary dimension is 
 ## Statements
 1. A composite dashboard should display two columns of panels.
 2. A two-column dashboard must use the same width for left and right panels.
-3. If a two-column dashboard has an odd number of panels, the final panel must use the same width as other panels.
+3. If a two-column layout leaves a single data panel in the last row of a section, that panel must still use the same grid width as each other data panel (the companion column may be empty). It must not span the full row width unless every time-series panel on the dashboard uses that same full width (see 6).
 
 ### Dashboard titles
 3.1. A dashboard title must use title case.
@@ -46,10 +66,11 @@ An *envelope graph* is a time-series panel where one complementary dimension is 
 ### Time-Series Panels
 4. A time-series panel must not have a right axis.
 5. A time-series panel must have a left axis.
-6. All time-series panels in a dashboard must have the same width.
-7. All time-series panels in a dashboard must start plotting data at the same horizontal offset from the left margin.
-8. The left-axis margin should use the same width across all panels in a dashboard.
-8.1. Left-axis margins must be wide enough so that no vertical axis tick label is truncated.
+6. All time-series panels in a dashboard must use the same grid width.
+7. The left-axis margin should use the same width across all panels in a dashboard.
+7.1. Left-axis margins must be wide enough so that no vertical axis tick label is truncated.
+7.2. Where the product exposes a fixed y-axis width or equivalent, use the same value on every time-series panel so the plot region starts at a consistent horizontal offset.
+8. Time-series panels in the same dashboard column must have aligned plot x-origins.
 
 ### Panel Title
 9. A time-series panel must have a panel title.
@@ -82,3 +103,5 @@ An *envelope graph* is a time-series panel where one complementary dimension is 
 1. Right axes create different plot widths and distort horizontal comparisons across panels.
 2. UOM context belongs in vertical axis tick labels, because scale can change with data range.
 3. Use envelope graphs to visually segregate complementary dimensions, such as read bytes/sec and write bytes/sec.
+4. Uniform grid width (6) keeps panel geometry comparable. A lone panel in the last row should not expand to full row width while neighbors use half width, or vertical comparison of the same column position becomes misleading; leaving an empty column preserves consistent grid width without inventing filler charts.
+5. Aligned plot x-origins let the reader scan vertically and treat one calendar instant as one vertical line across stacked time-series panels. Matching y-axis region width (7 and 7.2) is the usual way products expose that alignment; mixed draw styles (for example bars versus lines) or differing aggregation bucket boundaries can still shift where a value appears relative to ticks unless settings are harmonized.
