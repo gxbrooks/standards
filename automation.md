@@ -4,6 +4,7 @@
 An automation is a script, playbook, or program used to manage an environment consisting of interacting systems. A system may be an application or an OS on a hardware system. 
 
 An automator is a person or AI that implements an automation. 
+An operator is a person or AI that runs automations, but does not have the priviledges to develope production automations. 
 
 A transient automation (typically Linux scripts) are automations created by an AI for a human to run or use for by an AI for focused diagnostc scripts to resolve technical or functional issues within a project. 
 
@@ -95,8 +96,9 @@ For managing services, we define the following types of playbooks for managing a
 1. An automator, may or may not implement all of the playbooks in the service automation pattern, depending on how the service is built
 1. You must fully automate all system configurations so that we can always build from the source of a project. 
 1. The automation platform is Ansible. You must use Ansible for all automations, unless the automation is to manage or deploy prerequisite of  
-1. You should not execute a step in an automation, unless the step is necessary. The steps should check to see if the outcome of the step is already in place. For example, do not delete a directory if the directory does not already exist. You can use commands that internally  
-1. Each automations should be idempotent. I.e. rerunning the automation should result in the same configuration state. The primary automation platform is Ansible. 
+1. An automation should not execute a step unless the step is necessary. Each step should check whether the outcome of the step is already in place and skip the step when it is. For example, do not delete a directory if the directory does not exist, and do not re-apply a configuration that already matches the desired state. You may rely on commands or modules that perform this check internally (for example, most Ansible modules).
+1. If an automation cannot test whether a step is necessary (for example, the API does not expose the current state), the automation must emit an informational message that the action is being redone before re-executing the step.
+1. Each automation should be idempotent. I.e. rerunning the automation must not have any ill effects and must result in the same configuration state. The primary automation platform is Ansible. 
 ## Diagnostic and Test Playbooks
 1. For a service that has both test and diagnose playbooks, the diagnose playbook must include all checks in the test playbook for that service.
 1. A diagnose playbook should include deeper and broader checks than a test playbook for the same service.
