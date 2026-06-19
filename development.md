@@ -83,3 +83,5 @@ Timless (reference "The Timeless Way of Building" by Christopher Alexander) is n
    1. Configuration files must be deployed to target (or managed) hosts and used on the managed host
 1. No staff should explicitly put passwords in commands lines, where they may be logged
    1. Staff may use environment variables that contain passwords in a development environment
+1. Developers should Playbooks (or updated playbooks) over direct commands, in order to establish a more mature repeatable process. 
+
