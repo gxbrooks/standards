@@ -38,6 +38,7 @@ The service-management playbook names and their meanings are:
 | :--- | :--- |
 | **build** | Aggregate any artifacts needed to build a service and then compile or transform the artifacts into a form suitable to deploy or install the service |
 | **deploy** | Deploys all the resources to a host or container that runs the service |
+| **check** | Compares the deployed resources against their representation files and reports what would change, without changing anything |
 | **install** | Marshals all the resources needed for a service onto a control node, a managed node, or a local repository |
 | **start** | Starts the service on the container or host without having to reinstall or redeploy any resources |
 | **diagnose** | Observes and reports current health and state of the service and prerequisites with read-only checks. The name **status** is obsolete; a developer must use **diagnose**. |
@@ -64,6 +65,12 @@ The service-management playbook names and their meanings are:
 - Typical behavior: apply manifests, distribute configs, create service accounts, mount points.
 - Difference vs install: deploy targets service composition; install targets foundational prerequisites.
 - Side effects: service artifacts and manifests present, but the service may still be stopped.
+
+#### check
+- Purpose: answer "does the deployed configuration match the representation files?"
+- Typical behavior: dry-run the deploy playbook's resource application (for example, a diff-only sync, or the automation platform's own plan/dry-run mode) and report what would change.
+- Difference vs diagnose: check compares deployed state to the representation files (configuration drift); diagnose compares live state to expected service health (operational status). Check does not assert the service is healthy; diagnose does not compare against representation files.
+- Side effects: none. Read-only, safe to run at any time after deploy.
 
 #### start
 - Purpose: transition a deployed service to running.
@@ -158,15 +165,16 @@ The *operator* runs published playbooks. The operator does not add one-time fixe
 
 1. A developer ***must*** fully automate system configurations so that the project can always be built from source.
 2. This project designates Ansible as the production automation platform. A developer ***must*** implement production automations on that platform, unless the automation manages or deploys a prerequisite of the platform.
-3. A developer ***must*** follow the build, install, deploy, start, diagnose, test, stop, undeploy, and uninstall pattern of playbooks when managing a service.
+3. A developer ***must*** follow the build, install, deploy, check, start, diagnose, test, stop, undeploy, and uninstall pattern of playbooks when managing a service.
 4. For service management, a developer ***must*** name playbooks only with the names specified in the service-management pattern.
 5. A developer ***must*** place each service-management playbook at the top level of the automation directory for that module.
 6. A developer ***must*** name each service-management playbook with only the verb (for example `deploy.yml`, not `deploy_hadoop.yml` or `status.yml`).
 7. For each role, a developer ***must not*** create more than one playbook that performs that service-management role.
 8. A developer ***must*** implement playbooks to start and stop the service.
 9. A developer ***should*** implement a diagnose playbook.
-10. A developer ***may*** omit playbooks from the service-management pattern when the way the service is built makes those verbs unnecessary.
-11. A developer ***must not*** name a playbook `status.yml`. If a module already has `diagnose.yml`, the developer ***must*** merge any status checks into `diagnose.yml` and delete the status playbook.
+10. A developer ***should*** implement a check playbook for a module whose deploy playbook applies representation files.
+11. A developer ***may*** omit playbooks from the service-management pattern when the way the service is built makes those verbs unnecessary.
+12. A developer ***must not*** name a playbook `status.yml`. If a module already has `diagnose.yml`, the developer ***must*** merge any status checks into `diagnose.yml` and delete the status playbook.
 
 ### Task playbooks
 
@@ -199,9 +207,11 @@ A named variable that exists only to copy a literal into a representation adds a
 
 Git-managed playbooks describe the timeless desired state. A leftover rename, a one-time delete, or a deactivate-the-old-name step is a migration. After it has run, it is noise and a source of accidental damage. Keep that work in `tmp/` and out of Git.
 
+Check, diagnose, and test are three distinct read-only questions, not three names for the same check. Check answers "does what's deployed match the representation files" (configuration drift). Diagnose answers "is the service healthy" (operational status). Test answers "does the service behave correctly" (functional correctness). A module can fail one while passing the others: a service can be perfectly healthy and functionally correct while running a configuration that no longer matches its representation files (check fails, diagnose and test pass), or healthy with matching configuration but functionally broken (diagnose passes, test fails). On most automation platforms, check is close to free: a dry-run or plan mode the platform already provides (Terraform's `plan`, an rsync-based sync module's own dry-run/diff option) is often check's entire implementation, with no new assertions to write.
+
 Service-management playbooks statement 2 names Ansible as this project's platform. The other statements do not depend on Ansible. They apply equally when a developer uses Terraform, Chef, or another tool.
 
-An automation directory has at most nine service-management playbooks at its top level, named with the verbs in the table. Anything those playbooks call that is itself a playbook lives in `tasks/` under a descriptive kebab-case name. `common/` is only for shared variables. Representations and artifacts do not belong in either subdirectory; they live outside the automation directory. After representations moved out of the Ansible tree, many modules no longer need `common/` at all.
+An automation directory has at most ten service-management playbooks at its top level, named with the verbs in the table. Anything those playbooks call that is itself a playbook lives in `tasks/` under a descriptive kebab-case name. `common/` is only for shared variables. Representations and artifacts do not belong in either subdirectory; they live outside the automation directory. After representations moved out of the Ansible tree, many modules no longer need `common/` at all.
 
 ## References
 
