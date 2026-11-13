@@ -32,6 +32,16 @@ An *ephemeral automation* is a one-time play used to create, delete, rename, or 
 
 A *transient automation* is an automation created for a focused diagnostic or repair. Transient automations are typically short-lived scripts.
 
+*Terraform* is a declarative infrastructure-as-code automation platform. A developer declares the desired resources in a configuration; Terraform computes the difference between that configuration and its *state*, then applies the difference to the managed system.
+
+A *resource* is the smallest object a Terraform configuration can declare and manage as one unit. A provider may represent an entire collection as a single resource, with no resource type for one member of that collection.
+
+*State* is the record Terraform keeps matching each resource in a configuration to the corresponding real-world object and its last known attributes. Terraform computes a plan by comparing a configuration against this record, refreshed against the real objects.
+
+A *backend* is where Terraform stores and retrieves state. A *local backend* keeps state in a file readable only on the machine running Terraform. A *shared backend* (or *shared state*) keeps state in a location more than one developer, operator, or automation run can read and write.
+
+*State locking* is a capability of a shared backend that prevents two concurrent Terraform operations against the same state from running at once.
+
 The service-management playbook names and their meanings are:
 
 | **Playbook name** | **Description** |
@@ -164,6 +174,11 @@ The *operator* runs published playbooks. The operator does not add one-time fixe
 5. A developer ***must not*** rely on a drift check that compares only added or changed fields. The check ***must*** detect a field's removal from the representation as a change, so that removing a property and reapplying actually clears it from the managed system.
 6. For a representation managed by more than one platform, a developer ***must*** maintain a drift test that: applies the representation with the first platform; runs the second platform's dry-run (check) and confirms it reports no changes; applies with the second platform; and reruns the first platform and confirms it reports no changes. A developer ***should*** automate this test and run it whenever either platform's automation for that representation changes.
 
+### Terraform
+
+1. A developer ***must*** configure Terraform to use a shared backend with state locking enabled.
+2. When more than one team's Terraform configuration manages resources for the same application, and more than one of those configurations would otherwise declare the same resource, every team ***must*** manage that resource from one shared state.
+
 ### Service-management playbooks
 
 1. A developer ***must*** fully automate system configurations so that the project can always be built from source.
@@ -215,6 +230,8 @@ Check, diagnose, and test are three distinct read-only questions, not three name
 Service-management playbooks statement 2 names Ansible as this project's platform. The other statements do not depend on Ansible. They apply equally when a developer uses Terraform, Chef, or another tool.
 
 Idempotency statements 4 through 6 cover a case plain idempotency (statements 1 through 3) does not: a representation that more than one platform can apply. A single platform can rerun its own upsert without ill effect and still drift relative to a second platform that manages the same object differently — for example, an Ansible task that merges new and changed fields into a stored value but never removes a field the representation dropped. The second platform's own idempotency check (comparing the whole value) then reports drift that the first platform's check missed. Making the two platforms' results interchangeable means an operator can apply with whichever platform is convenient, in either order, without the platforms fighting each other or masking a stale field. The drift test in statement 6 is how a developer proves that property, not just asserts it.
+
+Terraform statement 2 is narrower than it may first read: it does not require every team working on the same application to merge into one state. It requires a single shared state only where a resource would otherwise be declared by more than one team's configuration — for example, a provider resource that represents an entire shared collection as one value, with no resource type for a single member of that collection (a settings object holding a list every team appends entries to is one case). If two teams track that resource from separate states, each team's plan only knows about its own declared value, so each team's apply reverts or deletes the other team's entries. A shared backend (statement 1) does not by itself fix this: Terraform always refreshes against the real object before planning, and diffs the result against the configuration, not against another team's state. Fixing it takes one shared state tracking one composed configuration for that resource, not merely the same backend location. Partition state by component or team wherever no resource crosses that boundary; consolidate into one shared state only where a resource genuinely does.
 
 An automation directory has at most ten service-management playbooks at its top level, named with the verbs in the table. Anything those playbooks call that is itself a playbook lives in `tasks/` under a descriptive kebab-case name. `common/` is only for shared variables. Representations and artifacts do not belong in either subdirectory; they live outside the automation directory. After representations moved out of the Ansible tree, many modules no longer need `common/` at all.
 
